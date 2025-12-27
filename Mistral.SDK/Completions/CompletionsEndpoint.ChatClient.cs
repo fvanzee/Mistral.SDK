@@ -256,9 +256,25 @@ namespace Mistral.SDK.Completions
             request.ParallelToolCalls = options?.AllowMultipleToolCalls ?? request.ParallelToolCalls;
             request.RandomSeed ??= (int?)options?.Seed;
 
-            if (options?.ResponseFormat is ChatResponseFormatJson)
+            if (options?.ResponseFormat is ChatResponseFormatJson chatResponseFormatJson)
             {
-                request.ResponseFormat ??= new ResponseFormat() { Type = ResponseFormat.ResponseFormatEnum.JSON };
+                if (chatResponseFormatJson.Schema != null)
+                {
+                    request.ResponseFormat = new ResponseFormat()
+                    {
+                        Type = ResponseFormat.ResponseFormatEnum.JSON_SCHEMA,
+                        JsonSchema = new ResponseFormatJsonSchema
+                        {
+                            Schema = chatResponseFormatJson.Schema.Value,
+                            Name = chatResponseFormatJson.SchemaName,
+                            Strict = true
+                        }
+                    };
+                }
+                else
+                {
+                    request.ResponseFormat = new ResponseFormat() { Type = ResponseFormat.ResponseFormatEnum.JSON };
+                }
             }
 
             List<Common.Tool> tools = null;
@@ -341,7 +357,7 @@ namespace Mistral.SDK.Completions
         object IChatClient.GetService(Type serviceType, object serviceKey) =>
             serviceKey is not null ? null :
             serviceType == typeof(ChatClientMetadata) ? (_metadata ??= new ChatClientMetadata(nameof(MistralClient), new Uri(Url))) :
-            serviceType?.IsInstanceOfType(this) is true ? this : 
+            serviceType?.IsInstanceOfType(this) is true ? this :
             null;
 
         private ChatClientMetadata _metadata;
@@ -359,5 +375,5 @@ namespace Mistral.SDK.Completions
         }
     }
 
-    
+
 }

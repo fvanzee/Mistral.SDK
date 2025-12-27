@@ -1,7 +1,6 @@
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
-using Mistral.SDK.Converters;
 
 namespace Mistral.SDK.Tests
 {
@@ -42,6 +41,28 @@ namespace Mistral.SDK.Tests
 
             //parse json
             Assert.IsNotNull(JsonSerializer.Deserialize<JsonResult>(response.Text));
+        }
+
+        [TestMethod]
+        public async Task TestMistralCompletionJsonSchemaMode()
+        {
+            IChatClient client = new MistralClient().Completions;
+
+            var chatResponseFormat = ChatResponseFormat.ForJsonSchema(
+                schema: AIJsonUtilities.CreateJsonSchema(typeof(JsonResult)),
+                schemaName: "JsonResult",
+                schemaDescription: "A simple object with a single 'result' key containing a hello world statement.");
+
+            var result = await client.GetResponseAsync<JsonResult>(
+                messages: new List<ChatMessage>()
+                {
+                    new(ChatRole.System, "You are an expert writing sonnets."),
+                    new(ChatRole.User, "Write me a sonnet about the Statue of Liberty.")
+                },
+                options: new() { ModelId = ModelDefinitions.OpenMistral7b, ResponseFormat = chatResponseFormat },
+                useJsonSchemaResponseFormat: true).ConfigureAwait(false);
+
+            Assert.IsTrue(!string.IsNullOrEmpty(result.Result.result));
         }
 
         [TestMethod]
